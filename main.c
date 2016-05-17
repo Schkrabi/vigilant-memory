@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "simpleGC.h"
 
 /**
@@ -7,76 +8,9 @@
  */
 int main(int argc, char *argv[])
 {	
-	/*int *ptr1, *ptr2, *ptr3;
-	header_t *block_ptr;
-	
-	GC_init();
-	
-	ptr1 = GC_malloc(sizeof(int));
-	//ptr2 = GC_malloc(300 * sizeof(int));
-	//ptr3 = GC_malloc(1000 * sizeof(int));
-	
-	printf("ptr1 address %x\n", ptr1);
-	
-	printf("Listing out the used list:\n");
-	for(block_ptr = usedptr; block_ptr != NULL; block_ptr = block_ptr->next)
-	{
-		printf("block_ptr: %x; ", block_ptr);
-		printf("start: %x; ", start_of_block(block_ptr));
-		printf("end: %x\n", end_of_block(block_ptr));
-	}
-	printf("Listing out the free list:\n");
-	for(block_ptr = freeptr; block_ptr != NULL; block_ptr = block_ptr->next)
-	{
-		printf("block_ptr: %x; ", block_ptr);
-		printf("start: %x; ", start_of_block(block_ptr));
-		printf("end: %x\n", end_of_block(block_ptr));
-	}
-	
-	printf("Calling GC_collect\n");
-	GC_collect();
-	
-	printf("Listing out the used list:\n");
-	for(block_ptr = usedptr; block_ptr != NULL; block_ptr = block_ptr->next)
-	{
-		printf("block_ptr: %x; ", block_ptr);
-		printf("start: %x; ", start_of_block(block_ptr));
-		printf("end: %x\n", end_of_block(block_ptr));
-	}
-	printf("Listing out the free list:\n");
-	for(block_ptr = freeptr; block_ptr != NULL; block_ptr = block_ptr->next)
-	{
-		printf("block_ptr: %x; ", block_ptr);
-		printf("start: %x; ", start_of_block(block_ptr));
-		printf("end: %x\n", end_of_block(block_ptr));
-	}
-	
-	printf("Nullifiing the ptr2.\n");
-	ptr2 = NULL;
-	
-	printf("Calling GC_collect\n");
-	GC_collect();	
-	
-	printf("Listing out the used list:\n");
-	for(block_ptr = usedptr; block_ptr != NULL; block_ptr = block_ptr->next)
-	{
-		printf("block_ptr: %x; ", block_ptr);
-		printf("start: %x; ", start_of_block(block_ptr));
-		printf("end: %x\n", end_of_block(block_ptr));
-	}
-	printf("Listing out the free list:\n");
-	for(block_ptr = freeptr; block_ptr != NULL; block_ptr = block_ptr->next)
-	{
-		printf("block_ptr: %x; ", block_ptr);
-		printf("start: %x; ", start_of_block(block_ptr));
-		printf("end: %x\n", end_of_block(block_ptr));
-	}
-	
-	return 0;*/
-	
 	header_t h, i, j, k;
-	header_t *list, *it, *ptr, *b1, *b2, *b3, *b4;
-	void* l;
+	header_t *list, *it, *ptr, *b1, *b2, *b3, *b4, **region;
+	void *l, **root, *p;
 	size_t s;
 	
 	char *charp;
@@ -170,7 +104,7 @@ int main(int argc, char *argv[])
 	printf("%d\n", next_block(b2));
 	printf("%d\n", next_block(b3));
 	printf("%d\n", next_block(b4));
-	*/
+	
 	
 	//GC_malloc test
 	charp = (char*)GC_malloc(6 * sizeof(char));
@@ -183,16 +117,16 @@ int main(int argc, char *argv[])
 	
 	printf("%s\n", charp);
 	
-	intp = (int*)GC_malloc(1000 * sizeof(int));
-	for(i1 = 0; i1 < 1000; i1++)
+	intp = (int*)GC_malloc(1030 * sizeof(int));
+	for(i1 = 0; i1 < 1030; i1++)
 		printf("%d", intp[i1]);
 	printf("\n");
 	
 	shortp = (short*)GC_malloc(sizeof(short));
 	*shortp = 4;
 	printf("%x: %d\n", shortp, *shortp);
+        printf("\n");
 	
-	//No data, static reference problem?
 	for(it = usedptr; it != NULL; it = next_block(it))
 		printf("%d\n", it->size);
 	printf("\n");
@@ -201,5 +135,119 @@ int main(int argc, char *argv[])
 		printf("%d\n", it->size);
 	printf("\n");
 	
+        
+        //Mark from region test
+        region = (header_t**)malloc(100 * sizeof(header_t*));
+        
+        region[0] = GC_malloc(5000);
+        region[1] = GC_malloc(6000);
+        region[2] = GC_malloc(7000);
+        
+        for(it = usedptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");
+	
+	for(it = freeptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");
+        
+        mark_from_region((void*)region, (void*)region + 100 * sizeof(header_t*));
+        
+        for(it = usedptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");
+	
+	for(it = freeptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");
+        
+        //Mark from heap test
+        root = (void**)GC_malloc(1000*sizeof(void*));
+        
+        root[0] = GC_malloc(5000);
+        root[3] = GC_malloc(6000);
+        root[7] = GC_malloc(7000);
+        
+        mark_from_heap();
+        
+        for(it = usedptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");
+        
+        
+        //Stack bottom, stack top test
+        stack_bottom = get_stack_bottom();
+        REFRESH_STACK_TOP
+        
+        for(p = stack_bottom; p < stack_top; p += sizeof(void*))
+            printf("%p: %p\n", p, *(ptr_int*)p);
+        
+        
+        //GC init test
+        GC_init();
+        printf("%p\n%p\n%p\n", stack_bottom, usedptr, freeptr);
+        */
+        
+        //GC Collect test
+        GC_init();
+        
+        h.size = 0;
+        h.next = NULL;
+        i.size = 0;
+        i.next = NULL;
+        j.size = 0;
+        j.next = NULL;
+        k.size = 0;
+        k.next = NULL;
+        list = NULL;
+        it = NULL;
+        ptr = NULL;
+        b1 = NULL;
+        b2 = NULL;
+        b3 = NULL;
+        b4 = NULL;
+        region = NULL;
+	l = NULL;
+        root = NULL;
+        p = NULL;
+	s = 0;	
+	charp = NULL;
+	intp = NULL;
+        i1 = 0;
+	shortp = NULL;
+        
+        root = (void**)GC_malloc(1000*sizeof(void*));
+        
+        root[0] = GC_malloc(5000);
+        root[3] = GC_malloc(6000);
+        root[7] = GC_malloc(7000);
+        root[7] = NULL;
+        
+        p = GC_malloc(9000);
+        p = NULL;
+	
+        /*printf("Used list:\n");
+        for(it = usedptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");
+        
+        printf("Free list:\n");
+        for(it = freeptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");*/
+        
+        printf("GC_collect\n");
+        GC_collect();
+        
+        printf("Used list:\n");
+        for(it = usedptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");
+        
+        printf("Free list:\n");
+        for(it = freeptr; it != NULL; it = next_block(it))
+		printf("%x: %d, %x\n", it, it->size, it->next);
+	printf("\n");
+        
 	return 0;
 } 

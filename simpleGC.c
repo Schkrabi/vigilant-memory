@@ -11,8 +11,10 @@
 #include <unistd.h> //sbrk
 #include <stdio.h> // For testing
 #include <stdlib.h> //For statck bottom search, to be replaced
-#include <assert.h>
 #include "simpleGC.h"
+
+header_t *freeptr;
+header_t *usedptr;
 
 /**
  * Tags the block
@@ -72,6 +74,9 @@ header_t *next_block(header_t* block_ptr)
 {
 	return (header_t*)((ptr_int)block_ptr->next & UNTAG_MASK);
 }
+
+void *stack_top;
+void *stack_bottom;
 
 /**
  * Alings first argument to the closest greater multiple of the second argument
@@ -261,7 +266,7 @@ void * GC_malloc(size_t alloc_size)
  * Scan a region of memory and mark any items in the used list appropriately.
  * Both arguments should be word aligned.
  */
-static void mark_from_region(void *start_ptr, void *end_ptr)
+void mark_from_region(void *start_ptr, void *end_ptr)
 {
 	header_t 	*block_ptr;
 	void	 	*current_ptr;
@@ -269,26 +274,22 @@ static void mark_from_region(void *start_ptr, void *end_ptr)
 	//Iterate word-wise throught the memory
 	for(current_ptr = start_ptr; current_ptr < end_ptr; current_ptr += sizeof(void*))
 	{
-		unsigned int value;
+		ptr_int value;
 		
-		//printf("Inspecting ptr %x\n", current_ptr);
-		value = *(unsigned int*)current_ptr;
-		
-		//printf("Seachring for memory with adress %x\n", current_ptr);
+		value = *(ptr_int*)current_ptr;
 		
 		//Iterate thought used memory blocks
 		block_ptr = usedptr;
 		do
 		{
 			//If pointer value point somewhere into this allocate block
-			if((unsigned int)start_of_block(block_ptr) <= value
-				&& (unsigned int)start_of_block(block_ptr) + block_ptr->size > value)
+			if((ptr_int)start_of_block(block_ptr) <= value
+				&& (ptr_int)start_of_block(block_ptr) + (ptr_int)block_ptr->size > value)
 			{
-				printf("Tagging block %x\n", block_ptr);
-				TAG(block_ptr)
+				tag(block_ptr);
 				break;
 			}
-			block_ptr = UNTAG(block_ptr->next);
+			block_ptr = next_block(block_ptr);
 		}while(block_ptr != NULL);
 	}
 }
@@ -296,14 +297,104 @@ static void mark_from_region(void *start_ptr, void *end_ptr)
 /**
  * Scans the heap for active pointers and marks ones that points somewhere
  */
-static void mark_from_heap(void)
+void mark_from_heap(void)
 {
 	header_t *current_ptr;
 	
-	for(current_ptr = usedptr; current_ptr != NULL; current_ptr = UNTAG(current_ptr->next))
+	for(current_ptr = usedptr; current_ptr != NULL; current_ptr = next_block(current_ptr))
 	{
 		mark_from_region(start_of_block(current_ptr), end_of_block(current_ptr));
 	}
+}
+
+/**
+ * Reads one line from opened file
+ * @param file read file
+ * @param buffer buffer where read characters are stored
+ * @param max_site size of buffer
+ * @returns number of read characters or -1 on error
+ */
+size_t read_line(FILE *file, char* buffer, size_t max_size)
+{
+    size_t buff_pos = 0;
+    
+    if(buffer == NULL || max_size == 0)
+        return -1;
+    
+    do
+    {
+        if(feof(file))
+            break;
+        
+        buffer[buff_pos] = fgetc(file);
+        buff_pos++;
+    }while( buff_pos < max_size 
+            && buffer[buff_pos - 1] != '\n');
+            
+    if(buff_pos > 0 && buffer[buff_pos - 1] != '\0')
+    {
+        if(buff_pos >= max_size)
+            return -1;
+        buffer[buff_pos] = '\0';
+        buff_pos++;
+    }
+    
+    return buff_pos;
+}
+
+#define BUFF_SIZE 10000
+#define STACK_WORD_LEN 9
+
+/**
+ * Opens the file /proc/self/maps and retrieves the line containing stack mapping
+ * @param buffer buffer where the line is stored
+ * @param max_size size of buffer
+ * @returns length of the returned line
+ */
+int get_stack_line(char *buffer, size_t max_size)
+{
+    FILE *maps;
+    size_t line_len;
+    int    found = 0;
+    
+    maps = fopen("/proc/self/maps", "r");
+    
+    while(!feof(maps))
+    {
+        line_len = read_line(maps, buffer, max_size);
+        if(line_len > STACK_WORD_LEN)
+        {
+            char *end = buffer + (line_len - STACK_WORD_LEN); 
+            if(strcmp(end, "[stack]\n") == 0)
+            {
+                found = 1;
+                break;
+            }
+        }
+    }
+    
+    fclose(maps);
+    
+    if(!found)
+        return -1;
+    
+    return line_len;
+}
+
+/**
+ * Gets the bottom of the stack from /proc/self/maps file
+ * @returns pointer to the bottom of the stack
+ */
+void *get_stack_bottom()
+{
+    char buffer[BUFF_SIZE];
+    void *bottom;
+    
+    get_stack_line(buffer, BUFF_SIZE);
+    
+    sscanf(buffer, "%p", &bottom);
+    
+    return bottom;
 }
 
 /*
@@ -313,23 +404,16 @@ static void mark_from_heap(void)
 void GC_init(void)
 {
     static int initted;
-    FILE *statfp;
 
     if (initted)
         return;
 
     initted = 1;
-
-    statfp = fopen("/proc/self/stat", "r");
-    assert(statfp != NULL);
-    fscanf(statfp,
-           "%*d %*s %*c %*d %*d %*d %*d %*d %*u "
-           "%*lu %*lu %*lu %*lu %*lu %*lu %*ld %*ld "
-           "%*ld %*ld %*ld %*ld %*llu %*lu %*ld "
-           "%*lu %*lu %*lu %lu", &stack_bottom);
-    fclose(statfp);
+    
+    stack_bottom = get_stack_bottom();
 
     usedptr = NULL;
+    freeptr = NULL;
 }
 
 /**
@@ -337,32 +421,28 @@ void GC_init(void)
  */
 void GC_collect(void)
 {
-	header_t *current_ptr, *previous_ptr = NULL;
-	int stack_top;
-	void *start;
-	extern char end, etext; // Provided by the linker.
+	header_t *current_ptr = NULL, *previous_ptr = NULL, *it = NULL;
+	void *BBSstart = NULL, *BBSend = NULL;
+	extern char etext; // Provided by the linker.
 	
 	if(is_empty(&usedptr))
 		return;
 	
-	//TODO make this work
-	//start = &etext + (sizeof(void*) - ((int)&etext % sizeof(void*)));
+	//BBSstart = aling_pointer((void*)&etext, sizeof(void));
+        //BBSend = stack_bottom;
 	
 	// Scan the BSS and initialized data segments. 
-	//mark_from_region(start, &end);
+	//mark_from_region(BBSstart, BBSend);  //Not working, etext weird
 
 	// Scan the stack.
-	asm volatile ("movl %%ebp, %0" : "=r" (stack_top));
-	
-	printf("\nMARKING FROM STACK\n\n");
-	mark_from_region(stack_bottom, (void*)stack_top);
+        REFRESH_STACK_TOP
+	mark_from_region(stack_bottom, stack_top);
 
-	// Mark from the heap.
-	printf("\nMARKING FROM HEAP\n\n");
-	mark_from_heap();
+	// Scan the heap
+	//mark_from_heap();
 	
 	// Collect 
-	current_ptr = usedptr;
+	/*current_ptr = usedptr;
 	while(current_ptr != NULL)
 	{
 		if(!is_tagged(current_ptr))
@@ -382,9 +462,8 @@ void GC_collect(void)
 				current_ptr = usedptr;
 				continue;
 			}
-			
 		}
 		previous_ptr = current_ptr;
 		current_ptr = current_ptr->next;
-	}
+	}*/
 }

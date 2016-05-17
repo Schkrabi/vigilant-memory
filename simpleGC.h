@@ -56,16 +56,20 @@ header_t *next_block(header_t*);
 /**
  * Start of the free memory block list
  */
-static header_t *freeptr;
+extern header_t *freeptr;
 /**
  * Start of the used memory block list
  */
-static header_t *usedptr;
+extern header_t *usedptr;
 
 /**
  * Bottom of a stack
  */
-static void *stack_bottom;
+extern void *stack_bottom;
+/**
+ * Top of a stack
+ */
+extern void *stack_top;
 
 size_t aling_by_size(size_t n, size_t aling_by);
 void* aling_pointer(void* n, size_t aling_by);
@@ -78,11 +82,19 @@ int is_empty(header_t **list_ptr);
 header_t *first_fit(header_t **list_ptr, size_t size);
 
 header_t *morecore(size_t size);
-//Up till here tested
-
 void * GC_malloc(size_t alloc_size);
 
-static void mark_from_region(void *start_ptr, void *end_ptr);
-static void mark_from_heap(void);
+void mark_from_region(void *start_ptr, void *end_ptr);
+void mark_from_heap(void);
+
+size_t read_line(FILE *file, char* buffer, size_t max_size);
+int get_stack_line(char *buffer, size_t max_size);
+void *get_stack_bottom();
+/**
+ * Refreshes the stack_top variable
+ */
+#define REFRESH_STACK_TOP asm volatile ("mov %%rbp, %0" : "=r" (stack_top));
+
 void GC_init(void);
+//Up till here tested
 void GC_collect(void);

@@ -1,0 +1,78 @@
+00400000-00402000 r-xp 00000000 00:36 2728                               /home/Schkrabi/Documents/SimpleGC/bin/simpleGC
+
+00601000-00602000 r--p 00001000 00:36 2728                               /home/Schkrabi/Documents/SimpleGC/bin/simpleGC
+
+00602000-00603000 rw-p 00002000 00:36 2728                               /home/Schkrabi/Documents/SimpleGC/bin/simpleGC
+
+00603000-00624000 rw-p 00000000 00:00 0                                  [heap]
+chkrabi/Documents/SimpleGC/bin/simpleGC
+
+7ffff7a35000-7ffff7bd3000 r-xp 00000000 00:23 19596                      /lib64/libc-2.19.so
+ents/SimpleGC/bin/simpleGC
+
+7ffff7bd3000-7ffff7dd2000 ---p 0019e000 00:23 19596                      /lib64/libc-2.19.so
+ents/SimpleGC/bin/simpleGC
+
+7ffff7dd2000-7ffff7dd6000 r--p 0019d000 00:23 19596                      /lib64/libc-2.19.so
+ents/SimpleGC/bin/simpleGC
+
+7ffff7dd6000-7ffff7dd8000 rw-p 001a1000 00:23 19596                      /lib64/libc-2.19.so
+ents/SimpleGC/bin/simpleGC
+
+7ffff7dd8000-7ffff7ddc000 rw-p 00000000 00:00 0 
+96                      /lib64/libc-2.19.so
+ents/SimpleGC/bin/simpleGC
+
+7ffff7ddc000-7ffff7dfd000 r-xp 00000000 00:23 19588                      /lib64/ld-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+7ffff7fd3000-7ffff7fd6000 rw-p 00000000 00:00 0 
+88                      /lib64/ld-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+7ffff7ff6000-7ffff7ff8000 rw-p 00000000 00:00 0 
+88                      /lib64/ld-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+7ffff7ff8000-7ffff7ffa000 r--p 00000000 00:00 0                          [vvar]
+ld-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+7ffff7ffa000-7ffff7ffc000 r-xp 00000000 00:00 0                          [vdso]
+ld-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+7ffff7ffc000-7ffff7ffd000 r--p 00020000 00:23 19588                      /lib64/ld-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+7ffff7ffd000-7ffff7ffe000 rw-p 00021000 00:23 19588                      /lib64/ld-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+7ffff7ffe000-7ffff7fff000 rw-p 00000000 00:00 0 
+88                      /lib64/ld-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+7ffffffde000-7ffffffff000 rw-p 00000000 00:00 0                          [stack]
+d-2.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
+ÿ
+ffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+.19.so
+o
+ents/SimpleGC/bin/simpleGC
+
