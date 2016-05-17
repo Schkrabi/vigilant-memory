@@ -77,6 +77,8 @@ header_t *next_block(header_t* block_ptr)
 
 void *stack_top;
 void *stack_bottom;
+void *BBSstart;
+void *BBSend;
 
 /**
  * Alings first argument to the closest greater multiple of the second argument
@@ -284,7 +286,7 @@ void mark_from_region(void *start_ptr, void *end_ptr)
 		{
 			//If pointer value point somewhere into this allocate block
 			if((ptr_int)start_of_block(block_ptr) <= value
-				&& (ptr_int)start_of_block(block_ptr) + (ptr_int)block_ptr->size > value)
+				&& (ptr_int)end_of_block(block_ptr) > value)
 			{
 				tag(block_ptr);
 				break;
@@ -400,10 +402,13 @@ void *get_stack_bottom()
 /*
  * Find the absolute bottom of the stack and set stuff up.
  * Pretty stupid way, at least find a way to use the system call for this (later)
+ * @returns 0 if everything went well 0 otherwise
  */
-void GC_init(void)
+int GC_init(void)
 {
     static int initted;
+    extern char __bss_start; // Provided by the linker.
+    void *tmp;
 
     if (initted)
         return;
@@ -414,6 +419,18 @@ void GC_init(void)
 
     usedptr = NULL;
     freeptr = NULL;
+    
+    BBSstart = aling_pointer((void*)&__bss_start, sizeof(void));
+    
+    tmp = sbrk(0);
+    if(tmp == (void*)-1)
+    {
+        fprintf(stderr, "Unable to init BBSend\n");
+        return 1;
+    }
+    BBSend = aling_pointer(tmp, sizeof(void));
+    
+    return 0;
 }
 
 /**
@@ -422,27 +439,22 @@ void GC_init(void)
 void GC_collect(void)
 {
 	header_t *current_ptr = NULL, *previous_ptr = NULL, *it = NULL;
-	void *BBSstart = NULL, *BBSend = NULL;
-	extern char etext; // Provided by the linker.
 	
 	if(is_empty(&usedptr))
 		return;
 	
-	//BBSstart = aling_pointer((void*)&etext, sizeof(void));
-        //BBSend = stack_bottom;
-	
 	// Scan the BSS and initialized data segments. 
-	//mark_from_region(BBSstart, BBSend);  //Not working, etext weird
+	mark_from_region(BBSstart, BBSend);
 
 	// Scan the stack.
         REFRESH_STACK_TOP
 	mark_from_region(stack_bottom, stack_top);
 
 	// Scan the heap
-	//mark_from_heap();
+	mark_from_heap();
 	
 	// Collect 
-	/*current_ptr = usedptr;
+	current_ptr = usedptr;
 	while(current_ptr != NULL)
 	{
 		if(!is_tagged(current_ptr))
@@ -450,8 +462,6 @@ void GC_collect(void)
 			header_t *block_ptr;
 			
 			block_ptr = remove_from_list(&usedptr, previous_ptr, current_ptr);
-			
-			printf("Found unmarked block %x\n", block_ptr);
 			
 			add_to_list(&freeptr, block_ptr);
 			
@@ -464,6 +474,6 @@ void GC_collect(void)
 			}
 		}
 		previous_ptr = current_ptr;
-		current_ptr = current_ptr->next;
-	}*/
+		current_ptr = next_block(current_ptr);
+	}
 }

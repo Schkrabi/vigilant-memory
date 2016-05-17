@@ -3,6 +3,9 @@
 #include <string.h>
 #include "simpleGC.h"
 
+static void* bss_ptr_1;
+static void* bss_ptr_2;
+
 /**
  * Testing entry point
  */
@@ -191,32 +194,7 @@ int main(int argc, char *argv[])
         //GC Collect test
         GC_init();
         
-        h.size = 0;
-        h.next = NULL;
-        i.size = 0;
-        i.next = NULL;
-        j.size = 0;
-        j.next = NULL;
-        k.size = 0;
-        k.next = NULL;
-        list = NULL;
-        it = NULL;
-        ptr = NULL;
-        b1 = NULL;
-        b2 = NULL;
-        b3 = NULL;
-        b4 = NULL;
-        region = NULL;
-	l = NULL;
-        root = NULL;
-        p = NULL;
-	s = 0;	
-	charp = NULL;
-	intp = NULL;
-        i1 = 0;
-	shortp = NULL;
-        
-        root = (void**)GC_malloc(1000*sizeof(void*));
+        root = (void**)GC_malloc(1000*sizeof(void*)); //8000 bytes
         
         root[0] = GC_malloc(5000);
         root[3] = GC_malloc(6000);
@@ -225,8 +203,14 @@ int main(int argc, char *argv[])
         
         p = GC_malloc(9000);
         p = NULL;
+        
+        bss_ptr_1 = GC_malloc(10000);
+        bss_ptr_2 = GC_malloc(11000);
+        bss_ptr_2 = NULL;
+        
+        //The blocks of size 7016, 9016 and 11016 should be freed by GC_collect
 	
-        /*printf("Used list:\n");
+        printf("Used list:\n");
         for(it = usedptr; it != NULL; it = next_block(it))
 		printf("%x: %d, %x\n", it, it->size, it->next);
 	printf("\n");
@@ -234,7 +218,7 @@ int main(int argc, char *argv[])
         printf("Free list:\n");
         for(it = freeptr; it != NULL; it = next_block(it))
 		printf("%x: %d, %x\n", it, it->size, it->next);
-	printf("\n");*/
+	printf("\n");
         
         printf("GC_collect\n");
         GC_collect();

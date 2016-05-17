@@ -70,6 +70,14 @@ extern void *stack_bottom;
  * Top of a stack
  */
 extern void *stack_top;
+/**
+ * Start of the uninitialized data segment
+ */
+extern void *BBSstart;
+/**
+ * End of the uninitilized data segment
+ */
+extern void *BBSend;
 
 size_t aling_by_size(size_t n, size_t aling_by);
 void* aling_pointer(void* n, size_t aling_by);
@@ -95,6 +103,6 @@ void *get_stack_bottom();
  */
 #define REFRESH_STACK_TOP asm volatile ("mov %%rbp, %0" : "=r" (stack_top));
 
-void GC_init(void);
+int GC_init(void);
 //Up till here tested
 void GC_collect(void);
